@@ -15,10 +15,7 @@
 		width: fit-content;
 		background-color: rgb(51, 55, 65);
 
-		$x: clamp(0rem, var(--posX), calc(var(--width) - 100%));
-		$y: clamp(0rem, var(--posY), calc(var(--height) - 100%));
-
-		transform: translate($x, $y);
+		transform: translate(var(--posX), var(--posY));
 		border-radius: 8px;
 	}
 
