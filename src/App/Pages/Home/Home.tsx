@@ -1,7 +1,7 @@
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useState, useEffect, PureComponent, createRef } from "react";
 import styles from "./Home.module.scss";
 
-export const throttle = (f: { (event: any): void; (arg0: any): void }) => {
+const throttle = (f: { (): void; (arg0: any): void }) => {
   let token: number | null = null,
     lastArgs: any[] | null = null;
   const invoke = () => {
@@ -18,110 +18,139 @@ export const throttle = (f: { (event: any): void; (arg0: any): void }) => {
   return result;
 };
 
-const id = (x: any) => x;
+const _classes = `draggable ${styles.Home__ctnr}`;
+class Draggable extends PureComponent {
+  _relX = 0;
+  _relY = 0;
+  _ref = createRef();
 
-const useDraggable = ({ onDrag = id } = {}) => {
-  const [pressed, setPressed] = useState(false);
-
-  const position = useRef({ x: 0, y: 0 });
-  const ref = useRef();
-
-  const unsubscribe = useRef();
-  const legacyRef = useCallback((elem) => {
-    ref.current = elem;
-    if (unsubscribe.current) {
-      unsubscribe.current();
-    }
-    if (!elem) {
+  _onMouseDown = (event: {
+    button: number;
+    pageX: number;
+    pageY: number;
+    preventDefault: () => void;
+  }) => {
+    if (event.button !== 0) {
       return;
     }
-    const handleMouseDown = (e: {
-      target: { style: { userSelect: string } };
-    }) => {
-      e.target.style.userSelect = "none";
-      setPressed(true);
-    };
-    elem.addEventListener("mousedown", handleMouseDown);
-    unsubscribe.current = () => {
-      elem.removeEventListener("mousedown", handleMouseDown);
-    };
-  }, []);
+    const { scrollLeft, scrollTop, clientLeft, clientTop } = document.body;
+    // Try to avoid calling `getBoundingClientRect` if you know the size
+    // of the moving element from the beginning. It forces reflow and is
+    // the laggiest part of the code right now. Luckily it's called only
+    // once per click.
+    const { left, top } = this._ref.current.getBoundingClientRect();
+    this._relX = event.pageX - (left + scrollLeft - clientLeft);
+    this._relY = event.pageY - (top + scrollTop - clientTop);
+    document.addEventListener("mousemove", this._onMouseMove);
+    document.addEventListener("mouseup", this._onMouseUp);
+    event.preventDefault();
+  };
+
+  _onMouseUp = (event: { preventDefault: () => void }) => {
+    document.removeEventListener("mousemove", this._onMouseMove);
+    document.removeEventListener("mouseup", this._onMouseUp);
+    event.preventDefault();
+  };
+
+  _onMouseMove = (event: {
+    pageX: number;
+    pageY: number;
+    preventDefault: () => void;
+  }) => {
+    this.props.onMove(event.pageX - this._relX, event.pageY - this._relY);
+    event.preventDefault();
+  };
+
+  private _update = throttle(() => {
+    const { x, y } = this.props;
+    this._ref.current.style = `--posX:${x}px;--posY:${y}px`;
+  });
+  public get update() {
+    return this._update;
+  }
+  public set update(value) {
+    this._update = value;
+  }
+
+  componentDidMount() {
+    this._ref.current.addEventListener("mousedown", this._onMouseDown);
+    this._update();
+  }
+
+  componentDidUpdate() {
+    this._update();
+  }
+
+  componentWillUnmount() {
+    this._ref.current.removeEventListener("mousedown", this._onMouseDown);
+    this._update.cancel();
+  }
+
+  render() {
+    return (
+      <section className={_classes} ref={this._ref}>
+        {this.props.children}
+      </section>
+    );
+  }
+}
+
+function getWindowDimensions() {
+  const { innerWidth: width, innerHeight: height } = window;
+  return {
+    width,
+    height,
+  };
+}
+
+export function useWindowDimensions() {
+  const [useWindowDimensions, setWindowDimensions] = useState(
+    getWindowDimensions()
+  );
 
   useEffect(() => {
-    if (!pressed) {
-      return;
+    function handleSize() {
+      setWindowDimensions(getWindowDimensions());
     }
 
-    const handleMouseMove = throttle(
-      (event: { movementX: number; movementY: number }) => {
-        if (!ref.current || !position.current) {
-          return;
-        }
-        const pos = position.current;
+    const wd = window.addEventListener("resize", handleSize);
 
-        const elem = ref.current;
-        position.current = onDrag({
-          x: pos.x + event.movementX,
-          y: pos.y + event.movementY,
-        });
+    wd;
+    return () => wd;
+  }, []);
 
-        // elem.style.transform = `translate(${pos.x * 2.5}px, ${pos.y * 2.5}px)`;
-        elem.style = `--posX: ${pos.x * 2}px; --posY: ${pos.y * 2}px;`;
-      }
+  return useWindowDimensions;
+}
+
+class Home extends PureComponent {
+  state = {
+    x: 450,
+    y: 400,
+  };
+
+  _move = (x: any, y: any) => this.setState({ x, y });
+
+  render() {
+    const { x, y } = this.state;
+
+    return (
+      <main className={styles.Home}>
+        <Draggable x={x} y={y} onMove={this._move}>
+          <header className={styles.Home__header} aria-labelledby="PageId">
+            <div className={styles.dotsWrapper}>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <h1 id="PageId">Home Page - Code Window</h1>
+          </header>
+          <section className={styles.Home__body}>
+            <h2>Drag me!!</h2>
+          </section>
+        </Draggable>
+      </main>
     );
-    const handleMouseUp = (e) => {
-      e.target.style.userSelect = "auto";
-      setPressed(false);
-    };
-
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      handleMouseMove.cancel();
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [pressed, onDrag]);
-
-  return [legacyRef, pressed];
-};
-
-function Home() {
-  const handleDrag = useCallback(
-    ({ x, y }) => ({
-      x: Math.max(0, x),
-      y: Math.max(0, y),
-    }),
-    []
-  );
-
-  const [ref, pressed] = useDraggable({
-    onDrag: handleDrag,
-  });
-
-  return (
-    <main className={styles.Home}>
-      <section
-        className={styles.Home__ctnr}
-        ref={ref}
-        // style={quickAndDirtyStyle}
-      >
-        <header className={styles.Home__header} aria-labelledby="PageId">
-          {/* <p>{pressed ? "Dragging..." : "Press to drag"}</p> */}
-          <div className={styles.dotsWrapper}>
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-
-          <h1 id="PageId">Home Page - Code Window</h1>
-        </header>
-        <section className={styles.Home__body}>
-          <button>Find a file</button>
-        </section>
-      </section>
-    </main>
-  );
+  }
 }
 
 export default Home;
