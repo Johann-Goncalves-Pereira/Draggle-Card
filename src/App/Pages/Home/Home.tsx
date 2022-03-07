@@ -34,10 +34,6 @@ class Draggable extends PureComponent {
       return;
     }
     const { scrollLeft, scrollTop, clientLeft, clientTop } = document.body;
-    // Try to avoid calling `getBoundingClientRect` if you know the size
-    // of the moving element from the beginning. It forces reflow and is
-    // the laggiest part of the code right now. Luckily it's called only
-    // once per click.
     const { left, top } = this._ref.current.getBoundingClientRect();
     this._relX = event.pageX - (left + scrollLeft - clientLeft);
     this._relY = event.pageY - (top + scrollTop - clientTop);
