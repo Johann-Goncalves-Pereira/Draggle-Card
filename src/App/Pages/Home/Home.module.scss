@@ -1,6 +1,6 @@
 .Home {
 	$clr-borders: #ffffff46;
-	$clr-background: hsla(223, 12%, 23%, var(--alpha, 1));
+	$clr-background: hsla(223, 12%, 40%, var(--alpha, 1));
 
 	$clr-text: aliceblue;
 
@@ -16,7 +16,7 @@
 
 	background-image: url("./stacked-steps-haikei.svg");
 	background-repeat: no-repeat;
-	background-size: contain;
+	background-size: cover;
 
 	&__ctnr {
 		--alpha: 0.2;
@@ -33,7 +33,14 @@
 
 		overflow: hidden;
 
-		backdrop-filter: blur(5px);
+		backdrop-filter: blur(10px);
+
+		cursor: move;
+		cursor: grab;
+
+		&:active {
+			cursor: grabbing;
+		}
 	}
 
 	&__header {
@@ -94,6 +101,7 @@
 	span {
 		$s: 1em;
 		// --clr-dot: #000000;
+		--sat: 70%;
 
 		width: $s;
 		height: $s;
@@ -102,14 +110,30 @@
 
 		background-color: var(--clr-dot);
 
+		cursor: pointer;
+
 		&:nth-child(1) {
-			--clr-dot: #ff514f;
+			--clr-dot: hsl(1, var(--sat), 65%);
 		}
 		&:nth-child(2) {
-			--clr-dot: #ffbc01;
+			--clr-dot: hsl(44, var(--sat), 50%);
 		}
 		&:nth-child(3) {
-			--clr-dot: #01cd1e;
+			--clr-dot: hsl(129, var(--sat), 40%);
+		}
+
+		&:hover {
+			--sat: 100%;
+
+			&:nth-child(1) {
+				--clr-dot: hsl(1, var(--sat), 65%);
+			}
+			&:nth-child(2) {
+				--clr-dot: hsl(44, var(--sat), 50%);
+			}
+			&:nth-child(3) {
+				--clr-dot: hsl(129, var(--sat), 40%);
+			}
 		}
 	}
 }
